@@ -1,3 +1,3 @@
-# 재무정보 시각화 (개인)
+# 재무정보 시각화
 
 financial statement information visualization
