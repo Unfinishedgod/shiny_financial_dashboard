@@ -1,0 +1,248 @@
+---
+title: "재무제표 시각화"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    fig.height: 5
+---
+
+```{r setup, include=FALSE}
+# 라이브러리, 데이터셋 로드
+library(flexdashboard)
+library(tidyverse)
+library(DT)
+library(treemap)
+library(plotly)
+
+BS <- read_tsv("dataset/01_bs.tsv", trim_ws = FALSE)
+PL <- read_tsv("dataset/02_pl.tsv", trim_ws = FALSE)
+CF <- read_tsv("dataset/03_cf.tsv", trim_ws = FALSE)
+```
+
+
+
+
+
+
+
+# Overview
+
+### INTRO
+
+```{r}
+```
+
+
+
+
+
+
+
+
+
+
+
+# 재무상태표
+
+```{r}
+
+ALL <- BS %>%
+  select(1,6,7,8,3)
+
+ASSET_ <- BS %>%
+  filter(is.na(DEPTH_3) == FALSE) %>% 
+  filter(DEPTH_1 == "자산") %>%
+  select(1,6,7,8,3)
+
+DEBT_ <- BS %>%
+  filter(is.na(DEPTH_3) == FALSE) %>% 
+  ## filter(DEPTH_1 == "부채") %>%
+  filter(DEPTH_1 != "자산") %>%
+  select(1,6,7,8,3)
+
+CAPITAL_ <- BS %>%
+  filter(is.na(DEPTH_3) == FALSE) %>% 
+  filter(DEPTH_1 == "자본") %>%
+  select(1,6,7,8,3)
+
+PL_ <- PL %>% 
+  gather(key = "YEAR", value="VALUE", -ACC_NM, -ID ) %>%
+  arrange(ID, desc(YEAR), ACC_NM) %>%
+  mutate(ACC_NM = factor(ACC_NM, levels = PL %>% arrange(desc(ID)) %>% pull(ACC_NM) ))
+
+
+```
+
+Column {data-width=400}
+-------------------------------------
+### 표 {data-height=600}
+```{r}
+# 재무상태표
+knitr::kable(BS[2:5])
+```
+
+### 부채와 자본 비 {data-height=400}
+```{r}
+
+asset_total <- BS %>%
+  filter(ACC_NAME == "자산") %>%
+  select(3) %>%
+  pull(1)
+
+debt_total <- BS %>% 
+  filter(ACC_NAME == "부채") %>%
+  select(3) %>%
+  pull(1)
+
+capital_total <- BS %>% 
+  filter(ACC_NAME == "자본") %>%
+  select(3) %>%
+  pull(1)
+
+pie_df <- data.frame(
+  group = c("ASSET", "DEBT", "CAPITAL"),
+  value = c(asset_total, debt_total, capital_total)
+)
+
+
+options( scipen = 1000 )
+pie <- ggplot(pie_df, aes(x="", y=value, fill=group))+
+  geom_bar(width = 1, stat = "identity")+
+  coord_polar("y", start=0) + scale_fill_brewer("Blues") +
+  theme(axis.text.x=element_blank())
+pie
+```
+
+Column {data-width=300}
+-------------------------------------
+### 차변 | 자산
+
+
+```{r fig.height = 14, fig.width = 8}
+treemap(
+  ASSET_,  
+  index=c("DEPTH_1","DEPTH_2","DEPTH_3"),
+  vSize="제 50 기",
+  vColor="제 50 기",
+  type="value",
+  height=100,
+  format.legend = list(scientific = FALSE, big.mark = " "),
+  fontfamily.title = "AppleGothic",
+  fontfamily.labels = "AppleGothic",
+  fontfamily.legend = "AppleGothic",
+  fontsize.title = 25,
+  fontsize.labels = 23, 
+  fontsize.legend = 12,
+  sortID = "ACC_CD",
+  lowerbound.cex.labels = 0,
+  align.labels = list(c("center", "center"),c("left","top"),c("right", "bottom"))
+)
+```
+
+Column {data-width=300}
+-------------------------------------
+### 대변 | 부채와 자본
+```{r fig.height = 14, fig.width = 8}
+treemap(
+  DEBT_,  
+  index=c("DEPTH_1","DEPTH_2","DEPTH_3"),
+  vSize="제 50 기",
+  vColor="제 50 기",
+  type="value",
+  height=30,
+  format.legend = list(scientific = FALSE, big.mark = " "),
+  fontfamily.title = "AppleGothic",
+  fontfamily.labels = "AppleGothic",
+  fontfamily.legend = "AppleGothic",
+  fontsize.title = 25,
+  fontsize.labels = 23, 
+  fontsize.legend = 12,
+  sortID = "-ACC_CD",
+  lowerbound.cex.labels = 0,
+  align.labels = list(c("center", "center"),c("left","top"),c("right", "bottom"))
+)
+```
+
+
+
+```{r fig.height = 6, fig.width = 8}
+### 자본
+# treemap(
+#   CAPITAL_,  
+#   index=c("DEPTH_2","DEPTH_3"),
+#   vSize="제 50 기",
+#   vColor="제 50 기",
+#   type="value",
+#   height=70,
+#   format.legend = list(scientific = FALSE, big.mark = " "),
+#   fontfamily.title = "AppleGothic",
+#   fontfamily.labels = "AppleGothic",
+#   fontfamily.legend = "AppleGothic",
+#   fontsize.title = 25,
+#   fontsize.labels = 23, 
+#   fontsize.legend = 12,
+#   sortID = "ACC_CD",
+#   lowerbound.cex.labels = 0
+# )
+```
+
+
+
+# 손익계산서
+
+Column {data-width=400}
+-------------------------------------
+### 표
+```{r}
+knitr::kable(PL)
+```   
+
+Column {data-width=600}
+-------------------------------------
+### 그래프
+```{r}
+PL_ %>% plot_ly(x= ~VALUE, y= ~ACC_NM, color= ~YEAR, orientation = 'h')
+```
+
+
+# 현금흐름표
+Column {data-width=400}
+-------------------------------------
+### 표
+    
+```{r}
+knitr::kable(CF)
+```
+   
+Column {data-width=600}
+-------------------------------------
+### 현금흐름
+```{r}
+
+```
+
+
+
+
+
+# 제조원가명세서
+Column {data-width=400}
+-------------------------------------
+### 표
+
+
+Column {data-width=600}
+-------------------------------------
+### intro
+### intro
+
+
+
+# 재무비율
+
+
+
+
+
+
+
